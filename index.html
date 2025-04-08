@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- Make sure viewport is set for mobile responsiveness -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>JS Minesweeper Classic (Mobile Friendly)</title>
+    <style>
+        /* --- Classic Windows Aesthetic --- */
+        body {
+            font-family: "MS Sans Serif", "Tahoma", "Verdana", sans-serif;
+            font-size: 12px;
+            background-color: #008080; /* Classic Teal */
+            color: #000000;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            /* Allow horizontal scrolling if content overflows */
+            overflow-x: auto;
+            /* Prevent pull-to-refresh and other browser gestures interfering with game */
+            overscroll-behavior-y: contain;
+        }
+
+        .window {
+            background-color: #C0C0C0; /* Silver */
+            border: 1px solid #808080; /* Gray */
+            border-top: 2px solid #FFFFFF;
+            border-left: 2px solid #FFFFFF;
+            border-bottom: 2px solid #404040; /* Darker Gray */
+            border-right: 2px solid #404040;
+            padding: 3px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
+            display: inline-block; /* Fit content */
+            min-width: 280px; /* Minimum sensible width */
+        }
+
+        .title-bar {
+            background-color: #000080; /* Navy */
+            color: #FFFFFF;
+            padding: 3px 5px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: default;
+            touch-action: none; /* Prevent scrolling/zooming by dragging title bar */
+        }
+
+        .title-bar button {
+            background-color: #C0C0C0;
+            border: 1px solid #808080;
+            border-top: 1px solid #FFFFFF;
+            border-left: 1px solid #FFFFFF;
+            border-bottom: 1px solid #404040;
+            border-right: 1px solid #404040;
+            font-family: "Marlett", "Webdings"; /* Symbols for buttons */
+            font-size: 10px;
+            padding: 0px 3px;
+            min-width: 16px;
+            min-height: 14px;
+            line-height: 10px;
+            cursor: default; /* Non-functional */
+        }
+
+        .content {
+            padding: 6px;
+            background-color: #C0C0C0; /* Silver */
+            border: 1px solid #404040;
+            border-top: 1px solid #808080;
+            border-left: 1px solid #808080;
+        }
+
+        .header {
+            background-color: #C0C0C0;
+            border: 2px inset #FFFFFF;
+             border-top-color: #808080;
+             border-left-color: #808080;
+            padding: 5px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap; /* Allow wrapping on small screens */
+            gap: 5px;
+        }
+
+        .status-display {
+            background-color: #000000; /* Black */
+            color: #FF0000; /* Red */
+            font-family: 'Consolas', 'Courier New', monospace; /* Digital-like */
+            font-size: 18px; /* Slightly larger for readability */
+            font-weight: bold;
+            padding: 3px 5px;
+            border: 1px inset #FFFFFF;
+            min-width: 50px; /* Adjusted min-width */
+            text-align: center;
+            letter-spacing: 1px;
+            flex-shrink: 0; /* Prevent shrinking too much */
+        }
+
+        .button-bar { /* Container for reset and flag toggle */
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             gap: 10px;
+             flex-grow: 1; /* Allow it to take space */
+        }
+
+        .game-button { /* Common style for reset and flag */
+            width: 30px; /* Slightly larger */
+            height: 30px;
+            font-size: 20px;
+            line-height: 28px;
+            text-align: center;
+            background-color: #C0C0C0;
+            border: 1px solid #808080;
+            border-top: 2px solid #FFFFFF;
+            border-left: 2px solid #FFFFFF;
+            border-bottom: 2px solid #404040;
+            border-right: 2px solid #404040;
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            user-select: none; /* Prevent text selection */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+        .game-button:active, .game-button.active { /* Style for pressed or active toggle */
+            border-top-color: #404040;
+            border-left-color: #404040;
+            border-bottom-color: #FFFFFF;
+            border-right-color: #FFFFFF;
+            background-color: #B0B0B0; /* Slightly darker */
+        }
+
+        .difficulty-selector {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 11px;
+             display: flex;
+             flex-wrap: wrap; /* Allow wrapping */
+             justify-content: center;
+             gap: 5px 10px; /* Row and column gap */
+        }
+         .difficulty-selector label {
+             margin: 0; /* Use gap instead */
+             cursor: pointer;
+             white-space: nowrap; /* Keep label on one line */
+         }
+         .difficulty-selector input {
+             margin-right: 3px;
+             vertical-align: middle;
+         }
+
+        #game-grid {
+            display: grid; /* Set by JS */
+            border: 3px inset #FFFFFF;
+            border-top-color: #808080;
+            border-left-color: #808080;
+            background-color: #C0C0C0;
+            line-height: 0; /* Prevent extra space */
+             /* Prevent default touch actions like scrolling/zooming when interacting with the grid */
+            touch-action: manipulation;
+        }
+
+        .cell {
+            /* Slightly larger cells for easier tapping */
+            width: 24px;
+            height: 24px;
+            background-color: #C0C0C0; /* Silver */
+            border: 1px solid #808080;
+            border-top: 2px solid #FFFFFF;
+            border-left: 2px solid #FFFFFF;
+            border-bottom: 2px solid #404040;
+            border-right: 2px solid #404040;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 16px; /* Slightly larger number */
+            font-weight: bold;
+            cursor: pointer;
+            color: #000000; /* Default */
+            /* Prevent text selection on cells */
+             user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .cell.revealed {
+            background-color: #C0C0C0;
+            border: 1px solid #808080; /* Sunken border */
+        }
+
+        .cell.mine-hit {
+             background-color: red;
+        }
+
+        /* Number Colors (same as before) */
+        .cell.c1 { color: #0000FF; }
+        .cell.c2 { color: #008000; }
+        .cell.c3 { color: #FF0000; }
+        .cell.c4 { color: #000080; }
+        .cell.c5 { color: #800000; }
+        .cell.c6 { color: #008080; }
+        .cell.c7 { color: #000000; }
+        .cell.c8 { color: #808080; }
+
+    </style>
+</head>
+<body>
+
+<div class="window">
+    <div class="title-bar">
+        <span>JS Minesweeper</span>
+        <button>r</button> <!-- Placeholder close button -->
+    </div>
+    <div class="content">
+        <div class="difficulty-selector">
+             <label><input type="radio" name="difficulty" value="beginner" checked> Beginner</label>
+             <label><input type="radio" name="difficulty" value="easy"> Easy</label>
+             <label><input type="radio" name="difficulty" value="normal"> Normal</label>
+             <label><input type="radio" name="difficulty" value="hard"> Hard</label>
+             <label><input type="radio" name="difficulty" value="expert"> Expert</label>
+        </div>
+        <div class="header">
+            <div id="mines-left" class="status-display">000</div>
+            <div class="button-bar">
+                 <button id="reset-button" class="game-button">🙂</button>
+                 <!-- Flag Toggle Button -->
+                 <button id="flag-toggle" class="game-button">⛏️</button>
+            </div>
+            <div id="timer" class="status-display">000</div>
+        </div>
+        <div id="game-grid">
+            <!-- Cells generated by JS -->
+        </div>
+    </div>
+</div>
+
+<script>
+    const gridContainer = document.getElementById('game-grid');
+    const minesLeftDisplay = document.getElementById('mines-left');
+    const timerDisplay = document.getElementById('timer');
+    const resetButton = document.getElementById('reset-button');
+    const flagToggleButton = document.getElementById('flag-toggle'); // Get the toggle button
+    const difficultyRadios = document.querySelectorAll('input[name="difficulty"]');
+
+    const CELL_SIZE = 24; // Define cell size for JS calculations
+
+    // Difficulties remain the same
+    const DIFFICULTIES = {
+        beginner: { rows: 9, cols: 9, mines: 10 },
+        easy:     { rows: 12, cols: 12, mines: 20 },
+        normal:   { rows: 16, cols: 16, mines: 40 },
+        hard:     { rows: 20, cols: 20, mines: 70 },
+        expert:   { rows: 16, cols: 30, mines: 99 },
+    };
+
+    let currentDifficulty = 'beginner';
+    let rows, cols, mineCount;
+    let board = [];
+    let mineLocations = [];
+    let flagsPlaced = 0;
+    let revealedCount = 0;
+    let timerInterval = null;
+    let seconds = 0;
+    let gameOver = false;
+    let firstClick = true;
+    let isFlagMode = false; // State for the flag toggle
+
+    // --- Game Initialization ---
+
+    function getSelectedDifficulty() {
+        // ... (same as before)
+        for (const radio of difficultyRadios) {
+            if (radio.checked) {
+                return radio.value;
+            }
+        }
+        return 'beginner';
+    }
+
+    function initGame() {
+        console.log("Initializing game...");
+        gameOver = false;
+        firstClick = true;
+        revealedCount = 0;
+        flagsPlaced = 0;
+        seconds = 0;
+        mineLocations = [];
+        board = [];
+        resetButton.textContent = '🙂';
+        isFlagMode = false; // Reset flag mode
+        updateFlagToggleDisplay(); // Update toggle button visual state
+
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        updateTimerDisplay();
+
+        currentDifficulty = getSelectedDifficulty();
+        const diff = DIFFICULTIES[currentDifficulty];
+        rows = diff.rows;
+        cols = diff.cols;
+        mineCount = diff.mines;
+
+        updateMinesLeftDisplay();
+        createBoardData();
+        renderGrid();
+        console.log(`Difficulty: ${currentDifficulty} (${rows}x${cols}, ${mineCount} mines)`);
+    }
+
+    function createBoardData() {
+        // ... (same as before)
+        board = [];
+        for (let r = 0; r < rows; r++) {
+            board[r] = [];
+            for (let c = 0; c < cols; c++) {
+                board[r][c] = {
+                    isMine: false,
+                    isRevealed: false,
+                    isFlagged: false,
+                    adjacentMines: 0,
+                    element: null,
+                    mineHit: false // Added this to track the specific mine clicked
+                };
+            }
+        }
+    }
+
+    function placeMines(firstClickRow, firstClickCol) {
+        // ... (same as before)
+        mineLocations = [];
+        let minesToPlace = mineCount;
+        while (minesToPlace > 0) {
+            const r = Math.floor(Math.random() * rows);
+            const c = Math.floor(Math.random() * cols);
+
+            // Ensure the first click area (3x3 around the click) is clear
+            let isSafeZone = false;
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (r === firstClickRow + dr && c === firstClickCol + dc) {
+                        isSafeZone = true;
+                        break;
+                    }
+                }
+                 if (isSafeZone) break;
+            }
+
+            if (!isSafeZone && !board[r][c].isMine) {
+                board[r][c].isMine = true;
+                mineLocations.push({ r, c });
+                minesToPlace--;
+            }
+        }
+        console.log(`Placed ${mineCount} mines.`);
+    }
+
+    function calculateAdjacentMines() {
+        // ... (same as before)
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                if (board[r][c].isMine) continue;
+                let count = 0;
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const nr = r + dr;
+                        const nc = c + dc;
+                        if (isValid(nr, nc) && board[nr][nc].isMine) {
+                            count++;
+                        }
+                    }
+                }
+                board[r][c].adjacentMines = count;
+            }
+        }
+        console.log("Calculated adjacent mines.");
+    }
+
+    // --- Rendering ---
+
+    function renderGrid() {
+        gridContainer.innerHTML = '';
+        // Use CELL_SIZE constant
+        gridContainer.style.gridTemplateColumns = `repeat(${cols}, ${CELL_SIZE}px)`;
+        gridContainer.style.gridTemplateRows = `repeat(${rows}, ${CELL_SIZE}px)`;
+        gridContainer.style.width = `${cols * CELL_SIZE}px`;
+        gridContainer.style.height = `${rows * CELL_SIZE}px`; // Also set height
+
+        for (let r = 0; r < rows; r++) {
+            for (let c = 0; c < cols; c++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.row = r;
+                cell.dataset.col = c;
+
+                // Use click for primary action (reveal or flag based on mode)
+                cell.addEventListener('click', handleCellClick);
+                // Prevent context menu entirely on mobile, as it's confusing
+                cell.addEventListener('contextmenu', (e) => e.preventDefault());
+
+                // Mobile-friendly touch interaction for smiley feedback
+                cell.addEventListener('touchstart', (e) => {
+                     // Prevent scrolling while interacting with cells
+                    // e.preventDefault(); // Careful: this can prevent scrolling the whole page if grid is large
+                    if (gameOver || board[r][c].isRevealed) return;
+                    // Show surprised face only if revealing (not flagging)
+                    if (!isFlagMode && !board[r][c].isFlagged) {
+                         resetButton.textContent = '😮';
+                    }
+                }, { passive: false }); // Need passive: false to allow preventDefault if uncommented
+
+                cell.addEventListener('touchend', handleTouchEnd);
+                cell.addEventListener('touchcancel', handleTouchEnd); // Handle cancelled touches
+
+                board[r][c].element = cell;
+                gridContainer.appendChild(cell);
+            }
+        }
+    }
+    // Separate handler for touchend/touchcancel to reset smiley
+    function handleTouchEnd() {
+         if (!gameOver && resetButton.textContent === '😮') {
+            resetButton.textContent = '🙂';
+         }
+    }
+
+
+    function updateCellDisplay(r, c) {
+        // ... (mostly same, check mineHit class)
+         const cellData = board[r][c];
+        const cellElement = cellData.element;
+        if (!cellElement) return;
+
+        cellElement.className = 'cell'; // Reset classes
+        cellElement.innerHTML = '';
+
+        if (cellData.isFlagged) {
+            cellElement.textContent = '🚩';
+        } else if (cellData.isRevealed) {
+            cellElement.classList.add('revealed');
+            if (cellData.isMine) {
+                cellElement.textContent = '💣';
+                if (cellData.mineHit) { // Check if this was the clicked mine
+                    cellElement.classList.add('mine-hit');
+                }
+            } else if (cellData.adjacentMines > 0) {
+                cellElement.textContent = cellData.adjacentMines;
+                cellElement.classList.add(`c${cellData.adjacentMines}`);
+            }
+        }
+    }
+
+     function updateMinesLeftDisplay() {
+        // ... (same as before)
+         const minesLeft = mineCount - flagsPlaced;
+         minesLeftDisplay.textContent = String(minesLeft).padStart(3, '0');
+     }
+
+     function updateTimerDisplay() {
+        // ... (same as before)
+         timerDisplay.textContent = String(Math.min(seconds, 999)).padStart(3, '0');
+     }
+
+     function updateFlagToggleDisplay() {
+         if (isFlagMode) {
+             flagToggleButton.textContent = '🚩'; // Show flag when active
+             flagToggleButton.classList.add('active');
+         } else {
+             flagToggleButton.textContent = '⛏️'; // Show pickaxe when inactive
+             flagToggleButton.classList.remove('active');
+         }
+     }
+
+    // --- Event Handlers ---
+
+    function handleCellClick(event) {
+        if (gameOver) return;
+
+        const cellElement = event.target.closest('.cell'); // Handle clicks on inner elements if any
+         if (!cellElement) return;
+
+        const r = parseInt(cellElement.dataset.row);
+        const c = parseInt(cellElement.dataset.col);
+        const cellData = board[r][c];
+
+        // Reset smiley if it was 'surprised' (might have been set by touchstart)
+        if (resetButton.textContent === '😮') {
+            resetButton.textContent = '🙂';
+        }
+
+        if (cellData.isRevealed) return; // Ignore clicks on revealed cells
+
+        // --- Toggle Mode Logic ---
+        if (isFlagMode) {
+            // --- Flagging Logic (moved from right-click) ---
+            if (cellData.isFlagged) {
+                 cellData.isFlagged = false;
+                 flagsPlaced--;
+            } else {
+                 // Only allow flagging up to the number of mines
+                 if (flagsPlaced < mineCount) {
+                     cellData.isFlagged = true;
+                     flagsPlaced++;
+                 } else {
+                     return; // Don't place more flags than mines
+                 }
+            }
+            updateMinesLeftDisplay();
+            updateCellDisplay(r, c);
+        } else {
+            // --- Revealing Logic ---
+            if (cellData.isFlagged) return; // Don't reveal flagged cells
+
+            if (firstClick) {
+                placeMines(r, c);
+                calculateAdjacentMines();
+                startTimer();
+                firstClick = false;
+            }
+
+            if (cellData.isMine) {
+                revealMine(r, c); // Mark the specific mine hit
+                endGame(false);
+            } else {
+                revealCell(r, c);
+                checkWinCondition();
+            }
+        }
+    }
+
+    // Removed handleCellRightClick functionality as primary flag method
+    // We keep the listener in renderGrid to prevent the context menu
+
+     function handleFlagToggleClick() {
+         isFlagMode = !isFlagMode;
+         updateFlagToggleDisplay();
+     }
+
+    // --- Game Logic ---
+
+     function startTimer() {
+        // ... (same as before)
+         if (timerInterval) clearInterval(timerInterval);
+         seconds = 0;
+         updateTimerDisplay();
+         timerInterval = setInterval(() => {
+             seconds++;
+             updateTimerDisplay();
+         }, 1000);
+     }
+
+    function revealCell(r, c) {
+        // ... (same as before - recursive reveal)
+         if (!isValid(r, c) || board[r][c].isRevealed || board[r][c].isFlagged || board[r][c].isMine) {
+            return;
+        }
+
+        board[r][c].isRevealed = true;
+        revealedCount++;
+        updateCellDisplay(r, c);
+
+        if (board[r][c].adjacentMines === 0) {
+            for (let dr = -1; dr <= 1; dr++) {
+                for (let dc = -1; dc <= 1; dc++) {
+                    if (dr === 0 && dc === 0) continue;
+                    revealCell(r + dr, c + dc);
+                }
+            }
+        }
+    }
+
+     function revealMine(r, c) {
+         // Mark the specific mine that was hit before revealing
+         board[r][c].mineHit = true;
+         board[r][c].isRevealed = true;
+         updateCellDisplay(r,c);
+     }
+
+    function revealAllMines() {
+        // ... (same as before, reveals mines, shows wrong flags)
+         mineLocations.forEach(({ r, c }) => {
+            const cellData = board[r][c];
+            if (!cellData.isRevealed && !cellData.isFlagged) {
+                 cellData.isRevealed = true;
+                 updateCellDisplay(r, c);
+            }
+        });
+         for (let r = 0; r < rows; r++) {
+             for (let c = 0; c < cols; c++) {
+                 const cellData = board[r][c];
+                 if (cellData.isFlagged && !cellData.isMine) {
+                     cellData.element.innerHTML = '❌'; // Mark wrongly placed flags
+                 }
+             }
+         }
+    }
+
+    function checkWinCondition() {
+        // ... (same as before)
+        if (!gameOver && revealedCount === (rows * cols) - mineCount) {
+            endGame(true);
+        }
+    }
+
+    function endGame(isWin) {
+        // ... (same as before, update smiley, stop timer, reveal mines on loss)
+        if (gameOver) return; // Prevent running multiple times if called concurrently
+        gameOver = true;
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+
+        if (isWin) {
+            console.log("Game Won!");
+            resetButton.textContent = '😎';
+             mineLocations.forEach(({ r, c }) => {
+                 if (!board[r][c].isFlagged) {
+                     board[r][c].isFlagged = true;
+                     flagsPlaced++; // Ensure count is accurate if auto-flagging
+                     updateCellDisplay(r, c);
+                 }
+             });
+             updateMinesLeftDisplay();
+        } else {
+            console.log("Game Over - Hit a Mine!");
+            resetButton.textContent = '😵';
+            revealAllMines();
+        }
+    }
+
+    function isValid(r, c) {
+        // ... (same as before)
+        return r >= 0 && r < rows && c >= 0 && c < cols;
+    }
+
+    // --- Event Listeners Setup ---
+
+    resetButton.addEventListener('click', initGame);
+    flagToggleButton.addEventListener('click', handleFlagToggleClick); // Listener for the toggle button
+
+    difficultyRadios.forEach(radio => {
+        radio.addEventListener('change', initGame);
+    });
+
+    // --- Initial Load ---
+    document.addEventListener('DOMContentLoaded', initGame);
+
+</script>
+
+</body>
+</html>
